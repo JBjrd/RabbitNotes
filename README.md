@@ -1,2 +1,2 @@
 # RabbitNotes
-Simple android note widget
+Work in progress simple android note widget

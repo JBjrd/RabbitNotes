@@ -1,6 +1,7 @@
 package bjrd.rabbitnotes
 import android.appwidget.AppWidgetManager
-import android.content.Context
+import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import android.widget.EditText
 import android.widget.RemoteViews
@@ -18,14 +19,12 @@ class EditNote : AppCompatActivity() {
 
         editText = findViewById(R.id.edit_text)
 
-        // Get the app widget ID from the intent
         appWidgetId = intent.getIntExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, AppWidgetManager.INVALID_APPWIDGET_ID)
         if (appWidgetId == AppWidgetManager.INVALID_APPWIDGET_ID) {
             finish()
             return
         }
 
-        // Load the text from the text file
         val file = File(this.filesDir, "widget_text_$appWidgetId")
         editText.setText(file.readText())
     }
@@ -33,27 +32,19 @@ class EditNote : AppCompatActivity() {
     override fun onStop() {
         super.onStop()
 
-        // Save the text to the text file
+        val noteText = editText.text.toString()
         val file = File(this.filesDir, "widget_text_$appWidgetId")
-        file.writeText(editText.text.toString())
+        file.writeText(noteText)
 
-        // Update the widget with the new text
+        // Set up remote adapter to put widget content into the row of list to allow scrolling
+        val views = RemoteViews(this.packageName, R.layout.note_widget)
+        val serviceIntent = Intent(this, NoteRemoteViewsService::class.java)
+        serviceIntent.putExtra("NoteText", noteText)
+        serviceIntent.data = Uri.parse(serviceIntent.toUri(Intent.URI_INTENT_SCHEME))
+        views.setRemoteAdapter(R.id.holder_list_view, serviceIntent)
+
         val appWidgetManager = AppWidgetManager.getInstance(this)
-        updateAppWidget(this, appWidgetManager, appWidgetId)
-        // Exit activity
-        finish()
-    }
-
-    private fun updateAppWidget(context: Context, appWidgetManager: AppWidgetManager, appWidgetId: Int) {
-        // Read the text from the widget's file
-        val file = File(this.filesDir, "widget_text_$appWidgetId")
-        val text = if (file.exists()) file.readText() else ""
-
-        // Construct the RemoteViews object
-        val views = RemoteViews(context.packageName, R.layout.note_widget)
-        views.setTextViewText(R.id.note_text, text)
-
-        // Update the widget
         appWidgetManager.updateAppWidget(appWidgetId, views)
+        finish()
     }
 }
